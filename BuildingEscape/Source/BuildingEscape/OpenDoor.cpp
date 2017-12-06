@@ -21,17 +21,12 @@ void UOpenDoor::BeginPlay()
 {
 	Super::BeginPlay();
 	Owner = GetOwner();
+	
+	if (PressurePlate == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s missing Pressure plate"), *GetOwner()->GetName())
+	}
 
-}
-
-void UOpenDoor::OpenDoor()
-{
-	Owner->SetActorRotation(FRotator(0.0f, OpenAngle, 0.0f));
-}
-
-void UOpenDoor::CloseDoor()
-{
-	Owner->SetActorRotation(FRotator(0.0f, CloseAngle, 0.0f));
 }
 
 
@@ -40,13 +35,12 @@ void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (GetTotalMassOfActorsOnPlate() > 50.f) { // TODO make into a parameter
-		OpenDoor();
-		LastDoorOpenTime = GetWorld()->GetTimeSeconds();
+	if (GetTotalMassOfActorsOnPlate() > TriggerMass) { // TODO make into a parameter
+		OnOpen.Broadcast();
 	}
-
-	if (GetWorld()->GetTimeSeconds() - LastDoorOpenTime >=  DoorCloseDelay) {
-		CloseDoor();
+	else
+	{
+		OnClose.Broadcast();
 	}
 }
 
@@ -55,6 +49,7 @@ float UOpenDoor::GetTotalMassOfActorsOnPlate()
 	float TotalMass = 0.f;
 	// Find all overlapped actors
 	TArray<AActor*> OverlappingActors;
+	if (!PressurePlate) { return TotalMass; }
 	PressurePlate->GetOverlappingActors(OUT OverlappingActors);
 	for (const auto* Actor : OverlappingActors)
 	{
